@@ -1,58 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>我的 EAN-13 自动计算生成器</title>
+    <title>7系条码自动生成器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input { font-size: 20px; padding: 10px; width: 250px; border: 2px solid #ddd; border-radius: 5px; }
-        button { font-size: 20px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #result { margin-top: 20px; font-weight: bold; color: #333; }
-        svg { margin-top: 20px; }
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; }
+        h2 { color: #28a745; margin-bottom: 20px; font-size: 20px; }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; font-size: 14px; color: #666; margin-bottom: 5px; }
+        input { font-size: 18px; padding: 12px; width: 100%; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; outline: none; }
+        input:focus { border-color: #28a745; }
+        button { font-size: 18px; padding: 12px; width: 100%; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        button:active { background: #218838; }
+        #result { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px dashed #ccc; display: none; }
+        .code-text { font-size: 22px; font-weight: bold; color: #333; letter-spacing: 2px; margin-bottom: 10px; }
+        svg { width: 100%; height: auto; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2>EAN-13 自动补全生成器</h2>
-        <p>请输入前 12 位数字：</p>
-        <input type="text" id="barcodeInput" maxlength="12" placeholder="例如: 700000400658">
-        <button onclick="generateBarcode()">生成条码</button>
-        <div id="result"></div>
-        <svg id="barcode"></svg>
+        <h2>7系条码助手</h2>
+        
+        <div class="input-group">
+            <label>6位货号</label>
+            <input type="tel" id="skuInput" maxlength="6" placeholder="如: 123456">
+        </div>
+        
+        <div class="input-group">
+            <label>重量 (kg)</label>
+            <input type="number" id="weightInput" step="0.001" placeholder="如: 0.525">
+        </div>
+
+        <button onclick="makeBarcode()">生成并计算</button>
+
+        <div id="result">
+            <div class="code-text" id="fullCodeShow"></div>
+            <svg id="barcode"></svg>
+        </div>
     </div>
 
     <script>
         function calculateEAN13(first12) {
-            let sumOdd = 0;
-            let sumEven = 0;
+            let sumOdd = 0, sumEven = 0;
             for (let i = 0; i < 12; i++) {
                 let num = parseInt(first12[i]);
-                if ((i + 1) % 2 === 0) {
-                    sumEven += num;
-                } else {
-                    sumOdd += num;
-                }
+                if ((i + 1) % 2 === 0) sumEven += num;
+                else sumOdd += num;
             }
             let total = sumOdd + (sumEven * 3);
             let checkDigit = (10 - (total % 10)) % 10;
             return first12 + checkDigit;
         }
 
-        function generateBarcode() {
-            let val = document.getElementById("barcodeInput").value;
-            if (val.length !== 12 || isNaN(val)) {
-                alert("请输入准确的 12 位数字！");
+        function makeBarcode() {
+            let sku = document.getElementById("skuInput").value;
+            let weight = document.getElementById("weightInput").value;
+
+            // 1. 检查输入
+            if (sku.length !== 6 || isNaN(sku)) {
+                alert("请输入6位数字货号！");
                 return;
             }
-            let fullCode = calculateEAN13(val);
-            document.getElementById("result").innerHTML = "完整 13 位全码: " + fullCode;
+            if (!weight || isNaN(weight)) {
+                alert("请输入正确的重量！");
+                return;
+            }
+
+            // 2. 自动拼装前 12 位
+            // 规则：7 (1位) + 货号 (6位) + 重量克数 (5位)
+            let weightInGrams = Math.round(parseFloat(weight) * 1000);
+            let weightStr = weightInGrams.toString().padStart(5, '0');
+            
+            let first12 = "7" + sku + weightStr;
+
+            // 3. 计算第 13 位并生成
+            let fullCode = calculateEAN13(first12);
+            
+            // 4. 显示与绘图
+            document.getElementById("result").style.display = "block";
+            document.getElementById("fullCodeShow").innerHTML = fullCode;
+            
             JsBarcode("#barcode", fullCode, {
                 format: "EAN13",
-                lineColor: "#000",
-                width: 2,
-                height: 100,
-                displayValue: true
+                width: 2.5,
+                height: 80,
+                displayValue: false // 下方已经手动显示了，条码自带的数字可以关闭
             });
         }
     </script>
