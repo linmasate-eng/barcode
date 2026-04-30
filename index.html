@@ -1,60 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>我的 EAN-13 自动计算生成器</title>
+    <title>条码助手-重量版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        input { font-size: 20px; padding: 10px; width: 250px; border: 2px solid #ddd; border-radius: 5px; }
-        button { font-size: 20px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #result { margin-top: 20px; font-weight: bold; color: #333; }
-        svg { margin-top: 20px; }
+        :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; }
+        body { font-family: -apple-system, sans-serif; background: #f8f9fa; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 100%; max-width: 450px; box-sizing: border-box; }
+        h2 { text-align: center; color: var(--primary); margin: 0 0 15px 0; font-size: 20px; }
+        .input-group { margin-bottom: 12px; }
+        label { display: block; font-size: 14px; color: #5f6368; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #dfe1e5; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
+        .preview-box { background: #f1f3f4; padding: 12px; border-radius: 8px; margin: 15px 0; border: 1px dashed #ccc; }
+        .preview-text { font-family: monospace; font-size: 14px; color: #3c4043; word-break: break-all; }
+        .btn-save { width: 100%; padding: 14px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        
+        #historyList { width: 100%; max-width: 450px; margin-top: 20px; }
+        .history-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; text-align: center; }
+        .item-info { text-align: left; margin-bottom: 8px; border-bottom: 1px dashed #eee; padding-bottom: 8px; }
+        .history-code { font-size: 20px; font-weight: bold; font-family: monospace; letter-spacing: 2px; color: #000; }
+        .history-note { color: #5f6368; font-size: 14px; margin-top: 4px; }
+        .barcode-img { width: 100% !important; height: auto; margin-top: 10px; }
+        .btn-del { position: absolute; right: 10px; top: 10px; background: #f1f3f4; border: none; padding: 4px 8px; border-radius: 4px; color: #5f6368; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2>EAN-13 自动补全生成器</h2>
-        <p>请输入前 12 位数字：</p >
-        <input type="text" id="barcodeInput" maxlength="12" placeholder="例如: 700000400658">
-        <button onclick="generateBarcode()">生成条码</button>
-        <div id="result"></div>
-        <svg id="barcode"></svg>
+        <h2>7系补码助手 (重量逻辑)</h2>
+        <div class="input-group">
+            <label>6位货号</label>
+            <input type="tel" id="skuInput" maxlength="6" placeholder="例如 123456" oninput="updatePreview()">
+        </div>
+        <div class="input-group">
+            <label>重量 (kg)</label>
+            <input type="number" id="weightInput" step="0.001" placeholder="例如 0.525" oninput="updatePreview()">
+        </div>
+        <div class="input-group">
+            <label>备注 (选填)</label>
+            <input type="text" id="noteInput" placeholder="如：青瓜">
+        </div>
+        
+        <div class="preview-box">
+            <div class="preview-text" id="rawPreview">规则：7 + 货号 + 重量</div>
+        </div>
+
+        <button class="btn-save" onclick="saveToHistory()">生成并存入历史</button>
     </div>
 
+    <div id="historyList"></div>
+
     <script>
+        function updatePreview() {
+            let sku = document.getElementById("skuInput").value.padStart(6, '0');
+            let w = parseFloat(document.getElementById('weightInput').value) || 0;
+            // 重量转为5位整数（克），例如 0.525 -> 00525
+            let weightString = Math.round(w * 1000).toString().padStart(5, '0');
+            document.getElementById('rawPreview').innerText = `预览：7 + ${sku} + ${weightString}`;
+        }
+
         function calculateEAN13(first12) {
-            let sumOdd = 0;
-            let sumEven = 0;
+            let sumOdd = 0, sumEven = 0;
             for (let i = 0; i < 12; i++) {
                 let num = parseInt(first12[i]);
-                if ((i + 1) % 2 === 0) {
-                    sumEven += num;
-                } else {
-                    sumOdd += num;
-                }
+                if ((i + 1) % 2 === 0) sumEven += num;
+                else sumOdd += num;
             }
             let total = sumOdd + (sumEven * 3);
             let checkDigit = (10 - (total % 10)) % 10;
             return first12 + checkDigit;
         }
 
-        function generateBarcode() {
-            let val = document.getElementById("barcodeInput").value;
-            if (val.length !== 12 || isNaN(val)) {
-                alert("请输入准确的 12 位数字！");
-                return;
-            }
-            let fullCode = calculateEAN13(val);
-            document.getElementById("result").innerHTML = "完整 13 位全码: " + fullCode;
-            JsBarcode("#barcode", fullCode, {
-                format: "EAN13",
-                lineColor: "#000",
-                width: 2,
-                height: 100,
-                displayValue: true
+        function saveToHistory() {
+            let sku = document.getElementById("skuInput").value;
+            let w = parseFloat(document.getElementById('weightInput').value) || 0;
+            let note = document.getElementById("noteInput").value || `货号${sku}`;
+
+            if (sku.length !== 6) { alert("请输入6位货号！"); return; }
+            
+            // 拼装前12位
+            let weightString = Math.round(w * 1000).toString().padStart(5, '0');
+            let first12 = "7" + sku + weightString;
+            
+            let fullCode = calculateEAN13(first12);
+            let history = JSON.parse(localStorage.getItem("barcodeHistory") || "[]");
+            history.unshift({ 
+                code: fullCode, 
+                note: `${note} (${w}kg)`, 
+                id: Date.now() 
             });
-        }
-    </script>
-</body>
-</html>
+            localStorage.setItem("barcodeHistory", JSON.stringify(history));
+            
+            renderHistory();
+            document.getElementBy
