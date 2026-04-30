@@ -1,101 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>条码计算器-增强版</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的 EAN-13 自动计算生成器</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; margin-bottom: 20px; }
-        h2 { text-align: center; color: #1a73e8; margin-top: 0; }
-        input, .note-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        .btn-group { display: flex; gap: 10px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.2s; }
-        .btn-gen { background: #1a73e8; color: white; }
-        .btn-save { background: #34a853; color: white; }
-        #barcode { width: 100%; height: auto; margin-top: 10px; display: none; }
-        
-        .history-title { width: 100%; max-width: 400px; font-weight: bold; margin: 10px 0; color: #5f6368; }
-        .history-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; width: 100%; max-width: 400px; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; }
-        .history-code { font-size: 18px; font-weight: bold; color: #202124; font-family: monospace; }
-        .history-note { color: #5f6368; font-size: 14px; margin-top: 5px; }
-        .btn-del { position: absolute; right: 15px; top: 15px; background: #ea4335; color: white; padding: 5px 10px; font-size: 12px; border-radius: 4px; }
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { font-size: 20px; padding: 10px; width: 250px; border: 2px solid #ddd; border-radius: 5px; }
+        button { font-size: 20px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #result { margin-top: 20px; font-weight: bold; color: #333; }
+        svg { margin-top: 20px; }
     </style>
 </head>
 <body>
-
     <div class="card">
-        <h2>条码助手</h2>
-        <input type="text" id="barcodeInput" maxlength="12" placeholder="输入前12位数字">
-        <input type="text" id="noteInput" placeholder="备注（如：青瓜 5.92元）">
-        <div class="btn-group">
-            <button class="btn-gen" onclick="generateBarcode()">仅预览</button>
-            <button class="btn-save" onclick="saveToHistory()">计算并保存</button>
-        </div>
-        <center><svg id="barcode"></svg></center>
+        <h2>EAN-13 自动补全生成器</h2>
+        <p>请输入前 12 位数字：</p>
+        <input type="text" id="barcodeInput" maxlength="12" placeholder="例如: 700000400658">
+        <button onclick="generateBarcode()">生成条码</button>
+        <div id="result"></div>
+        <svg id="barcode"></svg>
     </div>
 
-    <div class="history-title">历史记录</div>
-    <div id="historyList" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
-
     <script>
-        // 核心：计算EAN-13校验码
         function calculateEAN13(first12) {
-            let sumOdd = 0, sumEven = 0;
+            let sumOdd = 0;
+            let sumEven = 0;
             for (let i = 0; i < 12; i++) {
                 let num = parseInt(first12[i]);
-                if ((i + 1) % 2 === 0) sumEven += num;
-                else sumOdd += num;
+                if ((i + 1) % 2 === 0) {
+                    sumEven += num;
+                } else {
+                    sumOdd += num;
+                }
             }
             let total = sumOdd + (sumEven * 3);
             let checkDigit = (10 - (total % 10)) % 10;
             return first12 + checkDigit;
         }
 
-        // 预览条码
         function generateBarcode() {
             let val = document.getElementById("barcodeInput").value;
-            if (val.length !== 12 || isNaN(val)) { alert("请输入12位数字！"); return; }
+            if (val.length !== 12 || isNaN(val)) {
+                alert("请输入准确的 12 位数字！");
+                return;
+            }
             let fullCode = calculateEAN13(val);
-            let svg = document.getElementById("barcode");
-            svg.style.display = "block";
-            JsBarcode("#barcode", fullCode, { format: "EAN13", width: 2, height: 80, displayValue: true });
-        }
-
-        // 保存到列表
-        function saveToHistory() {
-            let val = document.getElementById("barcodeInput").value;
-            let note = document.getElementById("noteInput").value || "未命名备注";
-            if (val.length !== 12 || isNaN(val)) { alert("请输入12位数字！"); return; }
-            
-            let fullCode = calculateEAN13(val);
-            let history = JSON.parse(localStorage.getItem("barcodeHistory") || "[]");
-            
-            // 添加到数组开头
-            history.unshift({ code: fullCode, note: note, id: Date.now() });
-            localStorage.setItem("barcodeHistory", JSON.stringify(history));
-            
-            renderHistory();
-            document.getElementById("barcodeInput").value = "";
-            document.getElementById("noteInput").value = "";
-        }
-
-        // 渲染列表
-        function renderHistory() {
-            let history = JSON.parse(localStorage.getItem("barcodeHistory") || "[]");
-            let listHtml = "";
-            history.forEach(item => {
-                listHtml += `
-                    <div class="history-item">
-                        <div class="history-code">${item.code}</div>
-                        <div class="history-note">${item.note}</div>
-                        <button class="btn-del" onclick="deleteItem(${item.id})">删除</button>
-                    </div>
-                `;
+            document.getElementById("result").innerHTML = "完整 13 位全码: " + fullCode;
+            JsBarcode("#barcode", fullCode, {
+                format: "EAN13",
+                lineColor: "#000",
+                width: 2,
+                height: 100,
+                displayValue: true
             });
-            document.getElementById("historyList").innerHTML = listHtml;
         }
-
-        // 删除功能
-        function deleteItem(id) {
-            let history = JSON.parse(localStorage.getItem("barcodeHistory")
+    </script>
+</body>
+</html>
