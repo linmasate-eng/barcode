@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>我的 EAN-13 自动计算生成器</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        input { font-size: 20px; padding: 10px; width: 250px; border: 2px solid #ddd; border-radius: 5px; }
+        button { font-size: 20px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        #result { margin-top: 20px; font-weight: bold; color: #333; }
+        svg { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>EAN-13 自动补全生成器</h2>
+        <p>请输入前 12 位数字：</p >
+        <input type="text" id="barcodeInput" maxlength="12" placeholder="例如: 700000400658">
+        <button onclick="generateBarcode()">生成条码</button>
+        <div id="result"></div>
+        <svg id="barcode"></svg>
+    </div>
+
+    <script>
+        function calculateEAN13(first12) {
+            let sumOdd = 0;
+            let sumEven = 0;
+            for (let i = 0; i < 12; i++) {
+                let num = parseInt(first12[i]);
+                if ((i + 1) % 2 === 0) {
+                    sumEven += num;
+                } else {
+                    sumOdd += num;
+                }
+            }
+            let total = sumOdd + (sumEven * 3);
+            let checkDigit = (10 - (total % 10)) % 10;
+            return first12 + checkDigit;
+        }
+
+        function generateBarcode() {
+            let val = document.getElementById("barcodeInput").value;
+            if (val.length !== 12 || isNaN(val)) {
+                alert("请输入准确的 12 位数字！");
+                return;
+            }
+            let fullCode = calculateEAN13(val);
+            document.getElementById("result").innerHTML = "完整 13 位全码: " + fullCode;
+            JsBarcode("#barcode", fullCode, {
+                format: "EAN13",
+                lineColor: "#000",
+                width: 2,
+                height: 100,
+                displayValue: true
+            });
+        }
+    </script>
+</body>
+</html>
