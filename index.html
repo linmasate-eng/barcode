@@ -1,65 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>条码助手-重量版</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>条码计算器-增强版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
-        :root { --primary: #1a73e8; --success: #34a853; --danger: #ea4335; }
-        body { font-family: -apple-system, sans-serif; background: #f8f9fa; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); width: 100%; max-width: 450px; box-sizing: border-box; }
-        h2 { text-align: center; color: var(--primary); margin: 0 0 15px 0; font-size: 20px; }
-        .input-group { margin-bottom: 12px; }
-        label { display: block; font-size: 14px; color: #5f6368; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #dfe1e5; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        .preview-box { background: #f1f3f4; padding: 12px; border-radius: 8px; margin: 15px 0; border: 1px dashed #ccc; }
-        .preview-text { font-family: monospace; font-size: 14px; color: #3c4043; word-break: break-all; }
-        .btn-save { width: 100%; padding: 14px; background: var(--success); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; margin-bottom: 20px; }
+        h2 { text-align: center; color: #1a73e8; margin-top: 0; }
+        input, .note-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn-gen { background: #1a73e8; color: white; }
+        .btn-save { background: #34a853; color: white; }
+        #barcode { width: 100%; height: auto; margin-top: 10px; display: none; }
         
-        #historyList { width: 100%; max-width: 450px; margin-top: 20px; }
-        .history-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; text-align: center; }
-        .item-info { text-align: left; margin-bottom: 8px; border-bottom: 1px dashed #eee; padding-bottom: 8px; }
-        .history-code { font-size: 20px; font-weight: bold; font-family: monospace; letter-spacing: 2px; color: #000; }
-        .history-note { color: #5f6368; font-size: 14px; margin-top: 4px; }
-        .barcode-img { width: 100% !important; height: auto; margin-top: 10px; }
-        .btn-del { position: absolute; right: 10px; top: 10px; background: #f1f3f4; border: none; padding: 4px 8px; border-radius: 4px; color: #5f6368; }
+        .history-title { width: 100%; max-width: 400px; font-weight: bold; margin: 10px 0; color: #5f6368; }
+        .history-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; width: 100%; max-width: 400px; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: relative; }
+        .history-code { font-size: 18px; font-weight: bold; color: #202124; font-family: monospace; }
+        .history-note { color: #5f6368; font-size: 14px; margin-top: 5px; }
+        .btn-del { position: absolute; right: 15px; top: 15px; background: #ea4335; color: white; padding: 5px 10px; font-size: 12px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>7系补码助手 (重量逻辑)</h2>
-        <div class="input-group">
-            <label>6位货号</label>
-            <input type="tel" id="skuInput" maxlength="6" placeholder="例如 123456" oninput="updatePreview()">
+        <h2>条码助手</h2>
+        <input type="text" id="barcodeInput" maxlength="12" placeholder="输入前12位数字">
+        <input type="text" id="noteInput" placeholder="备注（如：青瓜 5.92元）">
+        <div class="btn-group">
+            <button class="btn-gen" onclick="generateBarcode()">仅预览</button>
+            <button class="btn-save" onclick="saveToHistory()">计算并保存</button>
         </div>
-        <div class="input-group">
-            <label>重量 (kg)</label>
-            <input type="number" id="weightInput" step="0.001" placeholder="例如 0.525" oninput="updatePreview()">
-        </div>
-        <div class="input-group">
-            <label>备注 (选填)</label>
-            <input type="text" id="noteInput" placeholder="如：青瓜">
-        </div>
-        
-        <div class="preview-box">
-            <div class="preview-text" id="rawPreview">规则：7 + 货号 + 重量</div>
-        </div>
-
-        <button class="btn-save" onclick="saveToHistory()">生成并存入历史</button>
+        <center><svg id="barcode"></svg></center>
     </div>
 
-    <div id="historyList"></div>
+    <div class="history-title">历史记录</div>
+    <div id="historyList" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
 
     <script>
-        function updatePreview() {
-            let sku = document.getElementById("skuInput").value.padStart(6, '0');
-            let w = parseFloat(document.getElementById('weightInput').value) || 0;
-            // 重量转为5位整数（克），例如 0.525 -> 00525
-            let weightString = Math.round(w * 1000).toString().padStart(5, '0');
-            document.getElementById('rawPreview').innerText = `预览：7 + ${sku} + ${weightString}`;
-        }
-
+        // 核心：计算EAN-13校验码
         function calculateEAN13(first12) {
             let sumOdd = 0, sumEven = 0;
             for (let i = 0; i < 12; i++) {
@@ -72,25 +52,50 @@
             return first12 + checkDigit;
         }
 
-        function saveToHistory() {
-            let sku = document.getElementById("skuInput").value;
-            let w = parseFloat(document.getElementById('weightInput').value) || 0;
-            let note = document.getElementById("noteInput").value || `货号${sku}`;
+        // 预览条码
+        function generateBarcode() {
+            let val = document.getElementById("barcodeInput").value;
+            if (val.length !== 12 || isNaN(val)) { alert("请输入12位数字！"); return; }
+            let fullCode = calculateEAN13(val);
+            let svg = document.getElementById("barcode");
+            svg.style.display = "block";
+            JsBarcode("#barcode", fullCode, { format: "EAN13", width: 2, height: 80, displayValue: true });
+        }
 
-            if (sku.length !== 6) { alert("请输入6位货号！"); return; }
+        // 保存到列表
+        function saveToHistory() {
+            let val = document.getElementById("barcodeInput").value;
+            let note = document.getElementById("noteInput").value || "未命名备注";
+            if (val.length !== 12 || isNaN(val)) { alert("请输入12位数字！"); return; }
             
-            // 拼装前12位
-            let weightString = Math.round(w * 1000).toString().padStart(5, '0');
-            let first12 = "7" + sku + weightString;
-            
-            let fullCode = calculateEAN13(first12);
+            let fullCode = calculateEAN13(val);
             let history = JSON.parse(localStorage.getItem("barcodeHistory") || "[]");
-            history.unshift({ 
-                code: fullCode, 
-                note: `${note} (${w}kg)`, 
-                id: Date.now() 
-            });
+            
+            // 添加到数组开头
+            history.unshift({ code: fullCode, note: note, id: Date.now() });
             localStorage.setItem("barcodeHistory", JSON.stringify(history));
             
             renderHistory();
-            document.getElementBy
+            document.getElementById("barcodeInput").value = "";
+            document.getElementById("noteInput").value = "";
+        }
+
+        // 渲染列表
+        function renderHistory() {
+            let history = JSON.parse(localStorage.getItem("barcodeHistory") || "[]");
+            let listHtml = "";
+            history.forEach(item => {
+                listHtml += `
+                    <div class="history-item">
+                        <div class="history-code">${item.code}</div>
+                        <div class="history-note">${item.note}</div>
+                        <button class="btn-del" onclick="deleteItem(${item.id})">删除</button>
+                    </div>
+                `;
+            });
+            document.getElementById("historyList").innerHTML = listHtml;
+        }
+
+        // 删除功能
+        function deleteItem(id) {
+            let history = JSON.parse(localStorage.getItem("barcodeHistory")
