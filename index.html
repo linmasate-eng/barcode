@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>7系条码助手-双功能版</title>
+    <title>7系条码助手-双功能版(带记忆)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
         :root { --primary: #28a745; --secondary: #17a2b8; }
-        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; display: flex; flex-direction: column; align-items: center; margin: 0; }
         
-        /* 顶部切换按钮 */
         .tab-container { display: flex; width: 100%; max-width: 400px; margin-bottom: 15px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
         .tab-btn { flex: 1; padding: 12px; border: none; font-size: 15px; font-weight: bold; cursor: pointer; color: #555; background: transparent; transition: 0.3s; }
         .tab-active-weight { background: var(--primary); color: white; }
@@ -17,13 +16,15 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; }
         .input-group { margin-bottom: 12px; text-align: left; }
         label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.3s; }
         input:focus { border-color: #999; }
         
+        /* 提示动画效果，当自动填入单价时闪烁一下 */
+        .highlight-fill { background-color: #e8f4f8; border-color: var(--secondary); }
+
         button.btn-weight { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         button.btn-price { width: 100%; padding: 14px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         
-        /* 列表区域 */
         .history-list { width: 100%; max-width: 400px; margin-top: 20px; }
         .item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
         .item-info { text-align: left; border-bottom: 1px dashed #eee; margin-bottom: 10px; padding-bottom: 8px; padding-right: 30px; }
@@ -33,7 +34,6 @@
         .btn-del { position: absolute; right: 10px; top: 15px; color: #dc3545; border: none; background: #ffe1e1; border-radius: 50%; width: 28px; height: 28px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         canvas { width: 100% !important; height: auto; margin-top: 5px; }
         
-        /* 区块显示控制 */
         #section-weight { display: block; }
         #section-price { display: none; }
     </style>
@@ -95,9 +95,9 @@
         window.onload = function() {
             renderWeightList();
             renderPriceList();
+            bindSkuAutoFill(); // 启用货号自动关联单价功能
         };
 
-        // 切换选项卡
         function switchTab(mode) {
             if (mode === 'weight') {
                 document.getElementById('section-weight').style.display = 'flex';
@@ -112,7 +112,6 @@
             }
         }
 
-        // 核心EAN13计算逻辑 (通用)
         function calculateEAN13(first12) {
             let sumOdd = 0, sumEven = 0;
             for (let i = 0; i < 12; i++) {
@@ -123,17 +122,33 @@
             return first12 + checkDigit;
         }
 
-        // ================= 重量模式逻辑 =================
+        // --- 货号自动关联单价逻辑 ---
+        function bindSkuAutoFill() {
+            document.getElementById('p-sku').addEventListener('input', function() {
+                // 将当前输入的货号补齐到6位，去记忆库里查找
+                let currentSku = this.value.padStart(6, '0');
+                let priceMap = JSON.parse(localStorage.getItem('sku_price_map') || '{}');
+                let unitInput = document.getElementById('p-unit');
+                
+                if (priceMap[currentSku]) {
+                    unitInput.value = priceMap[currentSku];
+                    // 给单价框加一个闪烁特效，提醒你自动填好了
+                    unitInput.classList.add('highlight-fill');
+                    setTimeout(() => unitInput.classList.remove('highlight-fill'), 500);
+                }
+            });
+        }
+
+        // ================= 重量模式 =================
         function saveWeightCode() {
             let skuInput = document.getElementById('w-sku').value;
             let weightInput = document.getElementById('w-weight').value;
-            let noteInput = document.getElementById('w-note').value || "未命名商品";
+            let noteInput = document.getElementById('w-note').value || "未命名";
 
-            if (!skuInput || !weightInput) { alert("请完整输入货号和重量"); return; }
+            if (!skuInput || !weightInput) return alert("请完整输入货号和重量");
 
             let sku = skuInput.padStart(6, '0');
-            let weightInGrams = Math.round(parseFloat(weightInput) * 1000);
-            let wStr = weightInGrams.toString().padStart(5, '0');
+            let wStr = Math.round(parseFloat(weightInput) * 1000).toString().padStart(5, '0');
             let fullCode = calculateEAN13("7" + sku + wStr);
 
             let history = JSON.parse(localStorage.getItem('list_weight') || '[]');
@@ -141,7 +156,6 @@
             localStorage.setItem('list_weight', JSON.stringify(history));
 
             document.getElementById('w-weight').value = "";
-            document.getElementById('w-note').value = "";
             renderWeightList();
         }
 
@@ -161,77 +175,9 @@
                         <canvas id="cw-${item.id}"></canvas>
                     </div>`;
             });
-            history.forEach(item => {
-                JsBarcode(`#cw-${item.id}`, item.code, { format: "EAN13", width: 2.5, height: 60, displayValue: false });
-            });
+            history.forEach(item => JsBarcode(`#cw-${item.id}`, item.code, { format: "EAN13", width: 2.5, height: 60, displayValue: false }));
         }
 
         function delWeight(id) {
             let history = JSON.parse(localStorage.getItem('list_weight') || '[]').filter(x => x.id !== id);
             localStorage.setItem('list_weight', JSON.stringify(history));
-            renderWeightList();
-        }
-
-        // ================= 价格反推模式逻辑 =================
-        function savePriceCode() {
-            let skuInput = document.getElementById('p-sku').value;
-            let unitPrice = document.getElementById('p-unit').value;
-            let totalPrice = document.getElementById('p-total').value;
-            let noteInput = document.getElementById('p-note').value || "未命名商品";
-
-            if (!skuInput || !unitPrice || !totalPrice) { alert("请完整输入货号、单价和总价"); return; }
-
-            // 核心公式：总价 / 单价 = 重量 (公斤) -> 乘以1000转为克
-            let weightInGrams = Math.round((parseFloat(totalPrice) / parseFloat(unitPrice)) * 1000);
-            
-            if(weightInGrams > 99999) { alert("计算出的重量超出5位数限制，请检查金额是否输入错误！"); return; }
-
-            let weightKg = (weightInGrams / 1000).toFixed(3); // 仅用于显示
-            let sku = skuInput.padStart(6, '0');
-            let wStr = weightInGrams.toString().padStart(5, '0');
-            let fullCode = calculateEAN13("7" + sku + wStr);
-
-            let history = JSON.parse(localStorage.getItem('list_price') || '[]');
-            history.unshift({ 
-                id: Date.now(), 
-                code: fullCode, 
-                note: noteInput, 
-                subText: `换算重量: ${weightKg}kg | 总价: ${totalPrice}元` 
-            });
-            localStorage.setItem('list_price', JSON.stringify(history));
-
-            // 保留货号和单价，只清空总价和备注，方便连续打码
-            document.getElementById('p-total').value = "";
-            document.getElementById('p-note').value = "";
-            renderPriceList();
-        }
-
-        function renderPriceList() {
-            let history = JSON.parse(localStorage.getItem('list_price') || '[]');
-            let listDiv = document.getElementById('list-price');
-            listDiv.innerHTML = "";
-            history.forEach(item => {
-                listDiv.innerHTML += `
-                    <div class="item">
-                        <button class="btn-del" onclick="delPrice(${item.id})">×</button>
-                        <div class="item-info">
-                            <div class="item-note">${item.note}</div>
-                            <div class="item-sub">${item.subText}</div>
-                            <span class="item-code">${item.code}</span>
-                        </div>
-                        <canvas id="cp-${item.id}"></canvas>
-                    </div>`;
-            });
-            history.forEach(item => {
-                JsBarcode(`#cp-${item.id}`, item.code, { format: "EAN13", width: 2.5, height: 60, displayValue: false });
-            });
-        }
-
-        function delPrice(id) {
-            let history = JSON.parse(localStorage.getItem('list_price') || '[]').filter(x => x.id !== id);
-            localStorage.setItem('list_price', JSON.stringify(history));
-            renderPriceList();
-        }
-    </script>
-</body>
-</html>
