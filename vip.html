@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>会员码独立版</title>
+    <title>会员二维码-离线版</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script>
+    /* qrcode.js 压缩版代码开始 */
+    var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this.parsedData=[];for(var b=0,d=a.length;d>b;b++){var e=a.charCodeAt(b);this.parsedData.push(e)}this.bitLength=8*this.parsedData.length}for(var b=function(a,b){this.typeNumber=a,this.errorCorrectLevel=b,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]},c={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8,ERROR_CORRECT_LEVEL_L:1,ERROR_CORRECT_LEVEL_M:0,ERROR_CORRECT_LEVEL_Q:3,ERROR_CORRECT_LEVEL_H:2},d=b.prototype,e=0;16>e;e++)d[e]=null;QRCode=function(a,b){if(this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:c.ERROR_CORRECT_LEVEL_H},"string"==typeof b&&(b={text:b}),b)for(var d in b)this._htOption[d]=b[d];"string"==typeof a&&(a=document.getElementById(a)),this._android=f(),this._el=a,this._oQRCode=null,this._htOption.text&&this.makeCode(this._htOption.text)};function f(){var a=!1,b=navigator.userAgent;return/Android/i.test(b)&&(a=!0,b.toString().match(/Android\s(\d+\.\d+)/)&&(a=parseFloat(RegExp.$1))),a}QRCode.prototype.makeCode=function(a){this._oQRCode=new b(this._htOption.typeNumber,this._htOption.correctLevel),this._oQRCode.addData(a),this._oQRCode.make(),this._el.innerHTML="",this._oDrawing=new g(this._el,this._htOption),this._oDrawing.draw(this._oQRCode)};QRCode.CorrectLevel=c;var g=function(a,b){this._el=a,this._htOption=b};g.prototype.draw=function(a){var b=this._el,c=this._htOption,d=document.createElement("canvas");d.width=c.width,d.height=c.height,b.appendChild(d);var e=d.getContext("2d");for(var f=0;f<a.moduleCount;f++)for(var g=0;g<a.moduleCount;g++){var h=a.isDark(f,g),i=g*c.width/a.moduleCount,j=f*c.height/a.moduleCount;e.fillStyle=h?c.colorDark:c.colorLight,e.fillRect(Math.round(i),Math.round(j),Math.ceil((g+1)*c.width/a.moduleCount)-Math.round(i),Math.ceil((f+1)*c.height/a.moduleCount)-Math.round(j))}}}(),b=QRCode;
+    /* 压缩版代码结束 */
+    </script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f9; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: sans-serif; background: #f4f7f9; padding: 15px; display: flex; flex-direction: column; align-items: center; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        .nav-link { margin-bottom: 15px; font-size: 14px; color: #007bff; text-decoration: none; display: block; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .nav-link { margin-bottom: 15px; font-size: 14px; color: #007bff; text-decoration: none; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .item { background: white; padding: 15px; border-radius: 10px; margin-top: 15px; width: 100%; max-width: 400px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; text-align: center; }
-        .btn-del { position: absolute; right: 10px; top: 10px; color: #ccc; border: none; background: none; font-size: 20px; }
+        .btn-del { position: absolute; right: 10px; top: 10px; color: #ccc; border: none; background: none; font-size: 20px; cursor: pointer; }
         .qr-box { display: flex; justify-content: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="nav-link">← 返回货物补码助手</a>
+    <a href="index.html" class="nav-link">← 返回补码工具</a>
 
     <div class="card">
-        <h2 style="margin:0; color:#333;">会员二维码生成</h2>
+        <h2 style="margin:10px 0;">会员二维码生成</h2>
         <input type="tel" id="phone" maxlength="11" placeholder="输入11位手机号">
         <input type="text" id="note" placeholder="备注姓名">
         <button onclick="saveQR()">生成并保存</button>
@@ -30,24 +34,52 @@
 
     <script>
         window.onload = render;
+
         function saveQR() {
             let phone = document.getElementById('phone').value;
             let note = document.getElementById('note').value || "临时会员";
-            if(phone.length !== 11) return alert("手机号需11位");
+            if(phone.length !== 11) { alert("手机号需11位"); return; }
+
             let h = JSON.parse(localStorage.getItem('my_vips') || '[]');
             h.unshift({id: Date.now(), phone: phone, note: note});
             localStorage.setItem('my_vips', JSON.stringify(h));
+            
             document.getElementById('phone').value = "";
             document.getElementById('note').value = "";
             render();
         }
+
         function render() {
             let h = JSON.parse(localStorage.getItem('my_vips') || '[]');
             let listDiv = document.getElementById('list');
             listDiv.innerHTML = "";
+
             h.forEach(item => {
                 let div = document.createElement('div');
                 div.className = 'item';
                 let qrId = "qr-" + item.id;
-                div.innerHTML
-      
+                div.innerHTML = `
+                    <button class="btn-del" onclick="del(${item.id})">×</button>
+                    <div style="text-align:left; font-weight:bold;">${item.note} (${item.phone})</div>
+                    <div id="${qrId}" class="qr-box"></div>
+                `;
+                listDiv.appendChild(div);
+
+                // 直接生成
+                new QRCode(document.getElementById(qrId), {
+                    text: item.phone,
+                    width: 160,
+                    height: 160,
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+            });
+        }
+
+        function del(id) {
+            let h = JSON.parse(localStorage.getItem('my_vips') || '[]').filter(x => x.id !== id);
+            localStorage.setItem('my_vips', JSON.stringify(h));
+            render();
+        }
+    </script>
+</body>
+</html>
