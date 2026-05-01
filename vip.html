@@ -1,83 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>会员二维码-兼容增强版</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script>
-    var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this.parsedData=[];for(var b=0,d=a.length;d>b;b++){var e=a.charCodeAt(b);this.parsedData.push(e)}this.bitLength=8*this.parsedData.length}for(var b=function(a,b){this.typeNumber=a,this.errorCorrectLevel=b,this.modules=null,this.moduleCount=0,this.dataCache=null,this.dataList=[]},c={MODE_NUMBER:1,MODE_ALPHA_NUM:2,MODE_8BIT_BYTE:4,MODE_KANJI:8,ERROR_CORRECT_LEVEL_L:1,ERROR_CORRECT_LEVEL_M:0,ERROR_CORRECT_LEVEL_Q:3,ERROR_CORRECT_LEVEL_H:2},d=b.prototype,e=0;16>e;e++)d[e]=null;QRCode=function(a,b){if(this._htOption={width:256,height:256,typeNumber:4,colorDark:"#000000",colorLight:"#ffffff",correctLevel:c.ERROR_CORRECT_LEVEL_H},"string"==typeof b&&(b={text:b}),b)for(var d in b)this._htOption[d]=b[d];"string"==typeof a&&(a=document.getElementById(a)),this._el=a,this._oQRCode=null,this._htOption.text&&this.makeCode(this._htOption.text)};QRCode.prototype.makeCode=function(a){this._oQRCode=new b(this._htOption.typeNumber,this._htOption.correctLevel),this._oQRCode.addData(a),this._oQRCode.make(),this._el.innerHTML="",this._oDrawing=new g(this._el,this._htOption),this._oDrawing.draw(this._oQRCode)};QRCode.CorrectLevel=c;var g=function(a,b){this._el=a,this._htOption=b};g.prototype.draw=function(a){var b=this._el,c=this._htOption,d=document.createElement("canvas");d.width=c.width,d.height=c.height,b.appendChild(d);var e=d.getContext("2d");for(var f=0;f<a.moduleCount;f++)for(var g=0;g<a.moduleCount;g++){var h=a.isDark(f,g),i=g*c.width/a.moduleCount,j=f*c.height/a.moduleCount;e.fillStyle=h?c.colorDark:c.colorLight,e.fillRect(Math.round(i),Math.round(j),Math.ceil((g+1)*c.width/a.moduleCount)-Math.round(i),Math.ceil((f+1)*c.height/a.moduleCount)-Math.round(j))}var k=d.toDataURL("image/png");var img=new Image();img.src=k;img.style.width="100%";b.innerHTML="";b.appendChild(img)}}();
-    </script>
+    <meta charset="UTF-8">
+    <title>极简二维码</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://lib.baomitu.com/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; box-sizing: border-box; }
-        .nav-btn { color: #007bff; text-decoration: none; font-size: 14px; margin-bottom: 15px; display: block; }
-        input { width: 100%; padding: 14px; margin: 10px 0; border: 2px solid #eee; border-radius: 10px; font-size: 18px; box-sizing: border-box; outline: none; }
-        input:focus { border-color: #007bff; }
-        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .item { background: white; padding: 20px; border-radius: 12px; margin-top: 15px; width: 100%; max-width: 400px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; text-align: center; box-sizing: border-box;}
-        .item-label { text-align: left; font-weight: bold; font-size: 16px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .btn-del { position: absolute; right: 10px; top: 15px; color: #ff4d4f; border: none; background: none; font-size: 24px; cursor: pointer; }
-        .qr-output { width: 180px; height: 180px; margin: 10px auto; display: block; }
+        body { text-align: center; padding: 20px; font-family: sans-serif; }
+        input { width: 80%; padding: 10px; margin: 10px 0; font-size: 16px; border: 1px solid #ccc; }
+        button { width: 85%; padding: 12px; background: #007bff; color: white; border: none; font-size: 16px; }
+        #qrcode { margin-top: 20px; display: flex; justify-content: center; }
+        #qrcode img { border: 10px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
-
-    <a href="index.html" class="nav-btn">← 返回货物条码工具</a>
-
-    <div class="card">
-        <h2 style="margin:0 0 10px 0; color:#333;">会员二维码</h2>
-        <input type="tel" id="phone" maxlength="11" placeholder="会员手机号">
-        <input type="text" id="note" placeholder="备注姓名">
-        <button onclick="addMember()">生成并保存</button>
-    </div>
-
-    <div id="list" style="width:100%; max-width:400px;"></div>
+    <h2>会员码测试</h2>
+    <input type="tel" id="txt" placeholder="输入手机号">
+    <button onclick="go()">生成二维码</button>
+    <div id="qrcode"></div>
 
     <script>
-        window.onload = loadData;
-
-        function addMember() {
-            let p = document.getElementById('phone').value;
-            let n = document.getElementById('note').value || "新会员";
-            if(p.length !== 11) { alert("手机号必须是11位"); return; }
-
-            let data = JSON.parse(localStorage.getItem('vip_v3') || '[]');
-            data.unshift({id: Date.now(), phone: p, note: n});
-            localStorage.setItem('vip_v3', JSON.stringify(data));
-
-            document.getElementById('phone').value = "";
-            document.getElementById('note').value = "";
-            loadData();
-        }
-
-        function loadData() {
-            let data = JSON.parse(localStorage.getItem('vip_v3') || '[]');
-            let list = document.getElementById('list');
-            list.innerHTML = "";
-
-            data.forEach(item => {
-                let div = document.createElement('div');
-                div.className = 'item';
-                let qrId = "qr-" + item.id;
-                div.innerHTML = `
-                    <button class="btn-del" onclick="remove(${item.id})">×</button>
-                    <div class="item-label">${item.note} <span style="font-weight:normal; color:#666;">(${item.phone})</span></div>
-                    <div id="${qrId}" class="qr-output"></div>
-                `;
-                list.appendChild(div);
-
-                // 生成二维码
-                new QRCode(document.getElementById(qrId), {
-                    text: item.phone,
-                    width: 180,
-                    height: 180
-                });
+        function go() {
+            var val = document.getElementById('txt').value;
+            if(!val) return alert('请输入内容');
+            var box = document.getElementById('qrcode');
+            box.innerHTML = ""; // 清空旧图
+            // 执行生成
+            new QRCode(box, {
+                text: val,
+                width: 200,
+                height: 200
             });
-        }
-
-        function remove(id) {
-            let data = JSON.parse(localStorage.getItem('vip_v3') || '[]').filter(x => x.id !== id);
-            localStorage.setItem('vip_v3', JSON.stringify(data));
-            loadData();
         }
     </script>
 </body>
