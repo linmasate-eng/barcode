@@ -1,92 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>全能收银助手</title>
+    <title>会员码独立版</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --primary: #1a73e8; --secondary: #34a853; }
-        body { font-family: -apple-system, sans-serif; background: #f8f9fa; padding: 15px; display: flex; flex-direction: column; align-items: center; margin: 0; }
-        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; max-width: 450px; box-sizing: border-box; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; border: none; background: #eee; border-radius: 8px; cursor: pointer; margin-bottom: 15px; }
-        .tab-active { background: var(--primary); color: white; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        button.main-btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        
-        .list-item { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; text-align: center; width: 100%; max-width: 450px; box-sizing: border-box;}
-        .item-head { text-align: left; border-bottom: 1px solid #eee; margin-bottom: 10px; padding-bottom: 5px; }
-        .btn-del { position: absolute; right: 10px; top: 15px; color: red; border: none; background: none; font-size: 20px; }
-        .qr-box, .bar-box { display: flex; justify-content: center; margin-top: 10px; }
-        canvas, img { max-width: 100%; }
+        body { font-family: sans-serif; background: #f4f7f9; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        .nav-link { margin-bottom: 15px; font-size: 14px; color: #007bff; text-decoration: none; display: block; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .item { background: white; padding: 15px; border-radius: 10px; margin-top: 15px; width: 100%; max-width: 400px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: relative; text-align: center; }
+        .btn-del { position: absolute; right: 10px; top: 10px; color: #ccc; border: none; background: none; font-size: 20px; }
+        .qr-box { display: flex; justify-content: center; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2 style="text-align:center; margin-top:0;">全能收银助手</h2>
-        <div style="display:flex; gap:10px; justify-content:center;">
-            <button id="tab1" class="tab-btn tab-active" onclick="switchMode('barcode')">货物条码</button>
-            <button id="tab2" class="tab-btn" onclick="switchMode('qrcode')">会员二维码</button>
-        </div>
+    <a href="index.html" class="nav-link">← 返回货物补码助手</a>
 
-        <div id="barcodeInputs">
-            <input type="tel" id="sku" placeholder="货号 (不足6位自动补0)">
-            <input type="number" id="weight" step="0.001" placeholder="重量 (kg)">
-        </div>
-        <div id="qrcodeInputs" style="display:none;">
-            <input type="tel" id="phone" maxlength="11" placeholder="会员手机号">
-        </div>
-        
-        <input type="text" id="note" placeholder="备注姓名或名称">
-        <button class="main-btn" onclick="handleSave()">保存到清单</button>
+    <div class="card">
+        <h2 style="margin:0; color:#333;">会员二维码生成</h2>
+        <input type="tel" id="phone" maxlength="11" placeholder="输入11位手机号">
+        <input type="text" id="note" placeholder="备注姓名">
+        <button onclick="saveQR()">生成并保存</button>
     </div>
 
-    <div id="list" style="width:100%; max-width:450px;"></div>
+    <div id="list" style="width:100%; max-width:400px;"></div>
 
     <script>
-        let currentMode = 'barcode';
-
-        function switchMode(mode) {
-            currentMode = mode;
-            document.getElementById('barcodeInputs').style.display = mode === 'barcode' ? 'block' : 'none';
-            document.getElementById('qrcodeInputs').style.display = mode === 'qrcode' ? 'block' : 'none';
-            document.getElementById('tab1').className = mode === 'barcode' ? 'tab-btn tab-active' : 'tab-btn';
-            document.getElementById('tab2').className = mode === 'qrcode' ? 'tab-btn tab-active' : 'tab-btn';
-        }
-
-        function handleSave() {
-            let note = document.getElementById('note').value || "未命名";
-            let data = { id: Date.now(), mode: currentMode, note: note };
-
-            if (currentMode === 'barcode') {
-                let sku = document.getElementById('sku').value.padStart(6, '0');
-                let weight = document.getElementById('weight').value;
-                if(!sku || !weight) return alert("请输入完整信息");
-                let wStr = Math.round(parseFloat(weight) * 1000).toString().padStart(5, '0');
-                let first12 = "7" + sku + wStr;
-                let a=0, b=0;
-                for(let i=0; i<12; i++){
-                    let n = parseInt(first12[i]);
-                    if((i+1)%2===0) b+=n; else a+=n;
-                }
-                data.content = first12 + ((10 - ((a + b * 3) % 10)) % 10);
-                data.sub = `${sku} | ${weight}kg`;
-            } else {
-                data.content = document.getElementById('phone').value;
-                if(data.content.length !== 11) return alert("手机号需11位");
-                data.sub = data.content;
-            }
-
-            let history = JSON.parse(localStorage.getItem('all_data') || '[]');
-            history.unshift(data);
-            localStorage.setItem('all_data', JSON.stringify(history));
+        window.onload = render;
+        function saveQR() {
+            let phone = document.getElementById('phone').value;
+            let note = document.getElementById('note').value || "临时会员";
+            if(phone.length !== 11) return alert("手机号需11位");
+            let h = JSON.parse(localStorage.getItem('my_vips') || '[]');
+            h.unshift({id: Date.now(), phone: phone, note: note});
+            localStorage.setItem('my_vips', JSON.stringify(h));
+            document.getElementById('phone').value = "";
+            document.getElementById('note').value = "";
             render();
         }
-
         function render() {
-            let history = JSON.parse(localStorage.getItem('all_data') || '[]');
+            let h = JSON.parse(localStorage.getItem('my_vips') || '[]');
             let listDiv = document.getElementById('list');
             listDiv.innerHTML = "";
-
+            h.forEach(item => {
+                let div = document.createElement('div');
+                div.className = 'item';
+                let qrId = "qr-" + item.id;
+                div.innerHTML
       
