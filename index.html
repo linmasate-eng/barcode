@@ -77,4 +77,119 @@
                     <label>单价 (元/kg)</label>
                     <input type="number" id="p-unit" step="0.01" placeholder="单价">
                 </div>
-                <div class="input-group" style="flex
+                <div class="input-group" style="flex:1;">
+                    <label>总价 (元)</label>
+                    <input type="number" id="p-total" step="0.01" placeholder="总额">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>备注 (选填)</label>
+                <input type="text" id="p-note" placeholder="备注">
+            </div>
+            <button class="btn-price" onclick="savePriceCode()">换算并生成</button>
+        </div>
+        <div id="list-price" class="history-list"></div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            renderWeightList();
+            renderPriceList();
+            
+            // 绑定货号输入事件：实时查找记忆的单价
+            document.getElementById('p-sku').addEventListener('input', function() {
+                let sku = this.value.padStart(6, '0');
+                let map = JSON.parse(localStorage.getItem('sku_price_map') || '{}');
+                let unitInput = document.getElementById('p-unit');
+                if (map[sku]) {
+                    unitInput.value = map[sku];
+                    unitInput.classList.add('highlight-fill');
+                    setTimeout(() => unitInput.classList.remove('highlight-fill'), 500);
+                }
+            });
+        };
+
+        function switchTab(mode) {
+            const sw = document.getElementById('section-weight');
+            const sp = document.getElementById('section-price');
+            const tw = document.getElementById('tab-weight');
+            const tp = document.getElementById('tab-price');
+            if (mode === 'weight') {
+                sw.style.display = 'flex'; sp.style.display = 'none';
+                tw.className = 'tab-btn tab-active-weight'; tp.className = 'tab-btn';
+            } else {
+                sw.style.display = 'none'; sp.style.display = 'flex';
+                tw.className = 'tab-btn'; tp.className = 'tab-btn tab-active-price';
+            }
+        }
+
+        function calculateEAN13(first12) {
+            let sO = 0, sE = 0;
+            for (let i = 0; i < 12; i++) {
+                let n = parseInt(first12[i]);
+                if ((i + 1) % 2 === 0) sE += n; else sO += n;
+            }
+            let ck = (10 - ((sO + sE * 3) % 10)) % 10;
+            return first12 + ck;
+        }
+
+        function saveWeightCode() {
+            let s = document.getElementById('w-sku').value;
+            let w = document.getElementById('w-weight').value;
+            let n = document.getElementById('w-note').value || "未命名";
+            if (!s || !w) return alert("请输入货号和重量");
+            let code = calculateEAN13("7" + s.padStart(6, '0') + Math.round(w*1000).toString().padStart(5, '0'));
+            let h = JSON.parse(localStorage.getItem('l_w') || '[]');
+            h.unshift({id: Date.now(), code: code, note: n, sub: `重量: ${w}kg` });
+            localStorage.setItem('l_w', JSON.stringify(h));
+            document.getElementById('w-weight').value = "";
+            renderWeightList();
+        }
+
+        function renderWeightList() {
+            let h = JSON.parse(localStorage.getItem('l_w') || '[]');
+            let l = document.getElementById('list-weight');
+            l.innerHTML = h.map(i => `<div class="item"><button class="btn-del" onclick="del('l_w',${i.id},'w')">×</button><div class="item-info"><div class="item-note">${i.note}</div><div class="item-sub">${i.sub}</div><span class="item-code">${i.code}</span></div><canvas id="cw-${i.id}"></canvas></div>`).join('');
+            h.forEach(i => JsBarcode(`#cw-${i.id}`, i.code, {format:"EAN13", width:2.5, height:60, displayValue:false}));
+        }
+
+        function savePriceCode() {
+            let s = document.getElementById('p-sku').value;
+            let u = document.getElementById('p-unit').value;
+            let t = document.getElementById('p-total').value;
+            let n = document.getElementById('p-note').value || "未命名";
+            if (!s || !u || !t) return alert("请完整输入");
+            
+            let grams = Math.round((t / u) * 1000);
+            if (grams > 99999) return alert("重量超出限制");
+            
+            let sku = s.padStart(6, '0');
+            let code = calculateEAN13("7" + sku + grams.toString().padStart(5, '0'));
+            
+            // 记忆单价
+            let map = JSON.parse(localStorage.getItem('sku_price_map') || '{}');
+            map[sku] = u;
+            localStorage.setItem('sku_price_map', JSON.stringify(map));
+
+            let h = JSON.parse(localStorage.getItem('l_p') || '[]');
+            h.unshift({id: Date.now(), code: code, note: n, sub: `总价: ${t}元 (约${(grams/1000).toFixed(3)}kg)`});
+            localStorage.setItem('l_p', JSON.stringify(h));
+            document.getElementById('p-total').value = "";
+            renderPriceList();
+        }
+
+        function renderPriceList() {
+            let h = JSON.parse(localStorage.getItem('l_p') || '[]');
+            let l = document.getElementById('list-price');
+            l.innerHTML = h.map(i => `<div class="item"><button class="btn-del" onclick="del('l_p',${i.id},'p')">×</button><div class="item-info"><div class="item-note">${i.note}</div><div class="item-sub">${i.sub}</div><span class="item-code">${i.code}</span></div><canvas id="cp-${i.id}"></canvas></div>`).join('');
+            h.forEach(i => JsBarcode(`#cp-${i.id}`, i.code, {format:"EAN13", width:2.5, height:60, displayValue:false}));
+        }
+
+        function del(key, id, type) {
+            let h = JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.id !== id);
+            localStorage.setItem(key, JSON.stringify(h));
+            type === 'w' ? renderWeightList() : renderPriceList();
+        }
+    </script>
+</body>
+</html>
