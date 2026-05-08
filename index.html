@@ -7,7 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
         :root { --primary: #28a745; --secondary: #17a2b8; }
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px; display: flex; flex-direction: column; align-items: center; margin: 0; }
+        /* 增加底部 padding，防止最后一个条码贴底 */
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 15px 15px 100px 15px; display: flex; flex-direction: column; align-items: center; margin: 0; }
         
         .tab-container { display: flex; width: 100%; max-width: 400px; margin-bottom: 15px; background: #e9ecef; border-radius: 10px; overflow: hidden; }
         .tab-btn { flex: 1; padding: 12px; border: none; font-size: 15px; font-weight: bold; cursor: pointer; color: #555; background: transparent; transition: 0.3s; }
@@ -19,20 +20,22 @@
         label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; }
         input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
         
-        /* 自动填入时的视觉反馈 */
         .highlight-fill { background-color: #e8f4f8 !important; border-color: var(--secondary) !important; transition: 0.3s; }
 
         button.btn-weight { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         button.btn-price { width: 100%; padding: 14px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
         
-        .history-list { width: 100%; max-width: 400px; margin-top: 20px; }
-        .item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
-        .item-info { text-align: left; border-bottom: 1px dashed #eee; margin-bottom: 10px; padding-bottom: 8px; padding-right: 30px; }
-        .item-note { font-weight: bold; color: #333; font-size: 15px; }
+        .history-list { width: 100%; max-width: 400px; margin-top: 25px; }
+        
+        /* 【核心修改】显著拉开条码卡片之间的距离 */
+        .item { background: white; padding: 20px; border-radius: 12px; margin-bottom: 30px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
+        
+        .item-info { text-align: left; border-bottom: 1px dashed #eee; margin-bottom: 12px; padding-bottom: 10px; padding-right: 30px; }
+        .item-note { font-weight: bold; color: #333; font-size: 16px; }
         .item-sub { font-size: 13px; color: #888; margin-top: 4px; }
         .item-code { font-family: monospace; color: #000; font-size: 16px; font-weight: bold; margin-top: 4px; display: block; }
         .btn-del { position: absolute; right: 10px; top: 15px; color: #dc3545; border: none; background: #ffe1e1; border-radius: 50%; width: 28px; height: 28px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        canvas { width: 100% !important; height: auto; margin-top: 5px; }
+        canvas { width: 100% !important; height: auto; margin-top: 8px; }
         
         #section-weight { display: flex; flex-direction: column; align-items: center; width: 100%; }
         #section-price { display: none; flex-direction: column; align-items: center; width: 100%; }
@@ -49,7 +52,7 @@
         <div class="card">
             <h2 style="margin:0 0 15px 0; color:var(--primary); font-size:18px;">录入重量生成条码</h2>
             <div class="input-group">
-                <label>货号 (不足6位自动补0)</label>
+                <label>货号</label>
                 <input type="tel" id="w-sku" placeholder="如: 16">
             </div>
             <div class="input-group">
@@ -57,7 +60,7 @@
                 <input type="number" id="w-weight" step="0.001" placeholder="如: 0.525">
             </div>
             <div class="input-group">
-                <label>备注 (选填)</label>
+                <label>备注</label>
                 <input type="text" id="w-note" placeholder="如: 青瓜">
             </div>
             <button class="btn-weight" onclick="saveWeightCode()">生成并保存</button>
@@ -69,7 +72,7 @@
         <div class="card">
             <h2 style="margin:0 0 15px 0; color:var(--secondary); font-size:18px;">输入价格反推重量</h2>
             <div class="input-group">
-                <label>货号 (进入此页输入货号自动填单价)</label>
+                <label>货号 (自动填单价)</label>
                 <input type="tel" id="p-sku" placeholder="输入货号">
             </div>
             <div style="display:flex; gap:10px;">
@@ -83,7 +86,7 @@
                 </div>
             </div>
             <div class="input-group">
-                <label>备注 (选填)</label>
+                <label>备注</label>
                 <input type="text" id="p-note" placeholder="备注">
             </div>
             <button class="btn-price" onclick="savePriceCode()">换算并生成</button>
@@ -96,7 +99,6 @@
             renderWeightList();
             renderPriceList();
             
-            // 绑定货号输入事件：实时查找记忆的单价
             document.getElementById('p-sku').addEventListener('input', function() {
                 let sku = this.value.padStart(6, '0');
                 let map = JSON.parse(localStorage.getItem('sku_price_map') || '{}');
@@ -150,7 +152,7 @@
             let h = JSON.parse(localStorage.getItem('l_w') || '[]');
             let l = document.getElementById('list-weight');
             l.innerHTML = h.map(i => `<div class="item"><button class="btn-del" onclick="del('l_w',${i.id},'w')">×</button><div class="item-info"><div class="item-note">${i.note}</div><div class="item-sub">${i.sub}</div><span class="item-code">${i.code}</span></div><canvas id="cw-${i.id}"></canvas></div>`).join('');
-            h.forEach(i => JsBarcode(`#cw-${i.id}`, i.code, {format:"EAN13", width:2.5, height:60, displayValue:false}));
+            h.forEach(i => JsBarcode(`#cw-${i.id}`, i.code, {format:"EAN13", width:2.5, height:70, displayValue:false}));
         }
 
         function savePriceCode() {
@@ -166,7 +168,6 @@
             let sku = s.padStart(6, '0');
             let code = calculateEAN13("7" + sku + grams.toString().padStart(5, '0'));
             
-            // 记忆单价
             let map = JSON.parse(localStorage.getItem('sku_price_map') || '{}');
             map[sku] = u;
             localStorage.setItem('sku_price_map', JSON.stringify(map));
@@ -182,7 +183,7 @@
             let h = JSON.parse(localStorage.getItem('l_p') || '[]');
             let l = document.getElementById('list-price');
             l.innerHTML = h.map(i => `<div class="item"><button class="btn-del" onclick="del('l_p',${i.id},'p')">×</button><div class="item-info"><div class="item-note">${i.note}</div><div class="item-sub">${i.sub}</div><span class="item-code">${i.code}</span></div><canvas id="cp-${i.id}"></canvas></div>`).join('');
-            h.forEach(i => JsBarcode(`#cp-${i.id}`, i.code, {format:"EAN13", width:2.5, height:60, displayValue:false}));
+            h.forEach(i => JsBarcode(`#cp-${i.id}`, i.code, {format:"EAN13", width:2.5, height:70, displayValue:false}));
         }
 
         function del(key, id, type) {
